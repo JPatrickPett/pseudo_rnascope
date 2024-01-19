@@ -1,4 +1,4 @@
-# ISS Patcher
+# pseudo-RNAscope
 
 `pseudo_rnascope` is ...
 
