@@ -3,10 +3,14 @@ __version__ = "0.0.5"
 
 
 import numpy as np
+import scipy as sp
 
 
 def get_array(adata, gene_symbol):
-    return np.array(adata.X[:, adata.var_names == gene_symbol].todense()).flatten()
+    exp_mat = adata.X[:, adata.var_names == gene_symbol]
+    if sp.sparse.issparse(exp_mat):
+        exp_mat = exp_mat.todense()
+    return np.array(exp_mat).flatten()
 
 
 def scale(x, max_val=255, vmin=None, vmax=None):
@@ -52,13 +56,10 @@ def add_pseudo_rna_scope(
     na_thr=0,
 ):
     """
-    Add information to an existing `anndata` object, so that two genes can be plotted with two colors.
-    Combined gene expression is represented through additive color mixing.
+    Add information to an existing `anndata` object, so that two genes can be plotted with two colors. Combined gene expression is represented through additive color mixing.
 
-    Adds a column `pseudo_RNAscope` to the `anndata.obs` dataframe, which can be selected in `scanpy` plotting functions
-    and saves the mixed colors in a corresponding `anndata.uns["pseudo_RNAscope_colors"]` entry.
-    Adds a column `pseudo_RNAscope_alpha` to the `anndata.obs` dataframe, which can be passed as alpha values to
-    plotting functions, so that low expression spots are transparent.
+    Adds a column `pseudo_RNAscope` to the `anndata.obs` dataframe, which can be selected in `scanpy` plotting functions and saves the mixed colors in a corresponding `anndata.uns["pseudo_RNAscope_colors"]` entry.
+    Adds a column `pseudo_RNAscope_alpha` to the `anndata.obs` dataframe, which can be passed as alpha values to plotting functions, so that low expression spots are transparent.
 
     Parameters
     ----------
@@ -73,8 +74,7 @@ def add_pseudo_rna_scope(
     channel<x>_color :
         color to use for this channel as a triple (RGB format, each value in the range [0,1])
     auto_range_quantiles :
-        tuple with lower and upper quantiles for automatic selection of `channel<x>_vmin` and `channel<x>_vmax`,
-        respecively. Setting the bounds explicitly overrides this option.
+        tuple with lower and upper quantiles for automatic selection of `channel<x>_vmin` and `channel<x>_vmax`, respecively. Setting the bounds explicitly overrides this option.
     knn_smooth :
         whether to run nearest-neighbor smoothing on the gene expression values to mitigate sparsity (default: False)
 

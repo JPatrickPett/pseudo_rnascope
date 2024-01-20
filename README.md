@@ -81,7 +81,7 @@ The package has been tested on:
 
 A python version `>=3.0` is required. 
 Various python libraries are used, listed in `pyproject.toml`. 
-Currently only `numpy` from the python scientific stack is required as a dependency, however, it only works together with an `anndata` object from the `scanpy` package as input.
+Currently only the python scientific stack (`numpy`, `scipy`) is required as a dependency, however, it only works together with an `anndata` object from the `scanpy` package as input and for downstream plotting.
 `pseudo_rnascope` and all dependencies can be installed via `pip` (see below).
 
 ## Installation
