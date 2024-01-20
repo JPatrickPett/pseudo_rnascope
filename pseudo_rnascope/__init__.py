@@ -1,7 +1,6 @@
 """Approximate missing features from higher dimensionality data neighbours"""
 __version__ = "0.0.5"
 
-
 import numpy as np
 import scipy as sp
 
@@ -68,7 +67,7 @@ def add_pseudo_rna_scope(
     channel<x> :
         gene name in `adata.var_names` to plot in this channel
     channel<x>_vmin :
-        minimum gene expression values to plot, lower values will have the same color
+        minimum gene expression values to plot, lower values will be dropped
     channel<x>_vmax :
         maximum gene expression values to plot, larger values will have the same color
     channel<x>_color :
@@ -82,6 +81,10 @@ def add_pseudo_rna_scope(
     -------
     A dictionary with selected dynamic ranges for plotting (e.g. for adding colorbars).
     """
+
+    for cnl in [channel1, channel2]:
+        if cnl not in adata.var_names:
+            raise ValueError(f"gene '{cnl}' not in 'adata.var_names'")
 
     if knn_smooth:
         channel1_vec = np.array(
