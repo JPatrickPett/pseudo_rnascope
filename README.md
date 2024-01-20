@@ -10,17 +10,20 @@ Run like this...
 channel1 = "FGF2"
 channel2 = "FGFR2"
 
+import scanpy as sc
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 from pseudo_rnascope import add_pseudo_rna_scope
 
 ranges = add_pseudo_rna_scope(
     adata,
     channel1 = channel1,
     channel2 = channel2,
-    auto_range_quantiles = (0.2, 0.8),
+    auto_range_quantiles = (0.2, 0.9),
     knn_smooth = True,
 )
 
-sc.set_figure_params(figsize=[16,16],dpi=75)
+sc.set_figure_params(figsize=[16,16], dpi=75)
 
 sc.pl.spatial(
     adata, 
@@ -56,15 +59,16 @@ The package has been tested on:
 
 **Python requirements**
 
-A python version `>=3.7` and `<3.12` is required for all dependencies to work. 
-Various python libraries are used, listed in `pyproject.toml`, including the python scientific stack with `scipy>=1.6.0` and `scanpy`.
+A python version `>=3.0` is required. 
+Various python libraries are used, listed in `pyproject.toml`. 
+Currently only `numpy` from the python scientific stack is required as a dependency, however, it only works together with an `anndata` object from the `scanpy` package as input.
 `pseudo_rnascope` and all dependencies can be installed via `pip` (see below).
 
 ## Installation
 
 *Optional: create and activate a new conda environment (with python<3.12):*
 ```bash
-mamba create -n pseudo_rnascope "python<3.12"
+mamba create -n pseudo_rnascope "python>3.9"
 mamba activate pseudo_rnascope
 ```
 
@@ -80,7 +84,7 @@ mamba activate pseudo_rnascope
 pip install git+https://github.com/JPatrickPett/pseudo_rnascope.git
 ```
 
-*(installation time: around 2 min)*
+*(installation time: around 1 min)*
 
 ## Usage and Documentation
 
