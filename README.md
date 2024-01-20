@@ -1,15 +1,24 @@
 # pseudo-RNAscope
 
-`pseudo_rnascope` is ...
+`pseudo_rnascope` is a simple package to plot gene expression of multiple genes as different colors in the same plot using any scanpy plotting function.
+The original use-case is to mimic RNAscope with visium data.
+
+- TODO: currently only two genes/colors are supported
 
 ## TLDR
 
 Run like this...
 
+To plot the expression overlap of two genes, e.g. *FGF2* and *FGFR2*, in spatial locations of visium data
+
 ```python
 channel1 = "FGF2"
 channel2 = "FGFR2"
+```
 
+run `add_pseudo_rna_scope` on an existing `anndata` object:
+
+```python
 import scanpy as sc
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -22,7 +31,16 @@ ranges = add_pseudo_rna_scope(
     auto_range_quantiles = (0.2, 0.9),
     knn_smooth = True,
 )
+```
 
+This will by default use red for channel1 (*FGF2*) and green for channel2 (*FGFR2*), hence overlaps will appear yellow.
+
+Dynamic ranges can be set for both channels explicitly, or automatically via upper and lower gene expression quantiles with `auto_range_quantiles`.
+Neareast-neighbor smoothing of expression values can be added to mitigate data sparsity with `knn_smooth=True`.
+
+Scanpy plotting functions can then be used by specifying the added `adata.obs` column `"pseudo_RNAscope"`.
+
+```python
 sc.set_figure_params(figsize=[16,16], dpi=75)
 
 sc.pl.spatial(
@@ -35,12 +53,14 @@ sc.pl.spatial(
     show=False,
 )
 
-plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel2_vmin"], ranges["channel2_vmax"]), cmap='Reds'),
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel2_vmin"], ranges["channel2_vmax"]), cmap='Greens'),
              orientation='vertical', label=channel2, extend='both', shrink=0.5, pad=-0.04)
 
-plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel1_vmin"], ranges["channel1_vmax"]), cmap='Greens'),
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel1_vmin"], ranges["channel1_vmax"]), cmap='Reds'),
              orientation='vertical', label=channel1, extend='both', shrink=0.5, pad=0.03)
 ```
+
+Corresponding colors for all spots are saved in `adata.uns["pseudo_RNAscope_colors"]` and another `anndata.obs` column called `"pseudo_RNAscope_alpha"` allows to set alpha values, making spots with low color intensity transparent.
 
 ## System requirements
 
