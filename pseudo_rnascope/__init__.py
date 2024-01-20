@@ -13,19 +13,21 @@ def get_array(adata, gene_symbol):
 
 
 def scale(x, max_val=255, vmin=None, vmax=None):
+    x = x.copy().astype(float)
     if vmin:
-        x[x < vmin] = 0
+        x[x < vmin] = np.nan
     if vmax:
         x[x > vmax] = vmax
-    return max_val * (x - np.min(x)) / (np.max(x) - np.min(x))
+    return max_val * (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x))
 
 
-def mix_colors(c1, c2):
-    return [round(2 * np.mean([a, b])) for a, b in zip(c1, c2)]
+def mix_colors(colors, gamma=4.5):
+    assert gamma > 0
+    return np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma)
 
 
 def rgb2hex(rgb_tuple):
-    r, g, b = rgb_tuple
+    r, g, b = np.round(rgb_tuple).astype(int)
     return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
@@ -117,7 +119,7 @@ def add_pseudo_rna_scope(
     ### ASSIGN COLORS
 
     rgb_values = [
-        mix_colors(np.array(channel1_color) * x, np.array(channel2_color) * y)
+        mix_colors([np.array(channel1_color) * (x if not np.isnan(x) else 0), np.array(channel2_color) * (y if not np.isnan(y) else 0)])
         for x, y in zip(
             scale(channel1_vec, vmin=channel1_vmin, vmax=channel1_vmax),
             scale(channel2_vec, vmin=channel2_vmin, vmax=channel2_vmax),
