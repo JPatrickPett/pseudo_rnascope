@@ -3,6 +3,9 @@
 `pseudo_rnascope` is a simple package to plot gene expression of multiple genes as different colors in the same plot using any scanpy plotting function.
 The original use-case is to mimic RNAscope with visium data.
 
+![pseudo_rnascope_limb](notebooks/pseudo_rnascope_limb.png?raw=true "Title")
+*visualisation of a developing limb with data from: B. Zhang et al. (2023) ‘A human embryonic limb cell atlas resolved in space and time.’ Nature 2023. DOI: 10.1038/s41586-023-00000-0.* 
+
 ## TLDR
 
 Run like this...
