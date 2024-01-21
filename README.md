@@ -69,6 +69,9 @@ Corresponding colors for all spots are saved in `adata.uns["pseudo_RNAscope_colo
 
 ## System requirements
 
+<details>
+<summary><b>show requirements</b></summary>
+
 ### Hardware requirements
 
 `pseudo_rnascope` can run on a standard computer with enough RAM to hold the used datasets in memory.
@@ -89,19 +92,11 @@ Various python libraries are used, listed in `pyproject.toml`.
 Currently only the python scientific stack (`numpy`, `scipy`) is required as a dependency, however, it only works together with an `anndata` object from the `scanpy` package as input and for downstream plotting.
 `pseudo_rnascope` and all dependencies can be installed via `pip` (see below).
 
+</details>
+
 ## Installation
 
-*Optional: create and activate a new conda environment (with python<3.12):*
-```bash
-mamba create -n pseudo_rnascope "python>3.9"
-mamba activate pseudo_rnascope
-```
-
 ### Install with pip
-
-**from PyPI**
-
-*will be added*
 
 **from github**
 
@@ -109,7 +104,11 @@ mamba activate pseudo_rnascope
 pip install git+https://github.com/JPatrickPett/pseudo_rnascope.git
 ```
 
-*(installation time: around 1 min)*
+**from PyPI**
+
+*will be added*
+
+*(installation time: <1 min)*
 
 ## Usage and Documentation
 
