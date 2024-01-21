@@ -114,7 +114,7 @@ def add_pseudo_rna_scope(
             raise ValueError(f"gene '{cnl}' not in 'adata.var_names'")
 
     # get expression vectors
-    exp_vectors = []
+    exp_vectors = {}
     if knn_smooth:
         for cnl in channels:
             exp_vectors[cnl] = np.array(

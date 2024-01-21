@@ -24,19 +24,24 @@ from pseudo_rnascope import add_pseudo_rna_scope
 
 ranges = add_pseudo_rna_scope(
     adata,
+
     channel1 = channel1,
     channel1_color = (1,0,0),  # red (RGB)
+
     channel2 = channel2,
     channel2_color = (0,1,0),  # green (RGB)
+
     auto_range_quantiles = (0.2, 0.9),
     knn_smooth = True,
+    gamma = 10,
 )
 ```
 
 This will use red for channel1 (*FGF2*) and green for channel2 (*FGFR2*), hence overlaps will appear yellow.
 
-Dynamic ranges can be set for both channels explicitly, or automatically via upper and lower gene expression quantiles with `auto_range_quantiles`.
-Neareast-neighbor smoothing of expression values can be added to mitigate data sparsity with `knn_smooth=True`.
+- Dynamic ranges can be set for both channels explicitly, or automatically via upper and lower gene expression quantiles with `auto_range_quantiles`.
+- Neareast-neighbor smoothing of expression values can be added to mitigate data sparsity with `knn_smooth=True`.
+- Larger `gamma` values make mixed colors appear brighter, while `gamma=1` corresponds to linear color mixing.
 
 Scanpy plotting functions can then be used by specifying the added `adata.obs` column `"pseudo_RNAscope"`.
 
