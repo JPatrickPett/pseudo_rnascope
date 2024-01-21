@@ -3,8 +3,6 @@
 `pseudo_rnascope` is a simple package to plot gene expression of multiple genes as different colors in the same plot using any scanpy plotting function.
 The original use-case is to mimic RNAscope with visium data.
 
-- TODO: currently only two genes/colors are supported
-
 ## TLDR
 
 Run like this...
@@ -27,7 +25,9 @@ from pseudo_rnascope import add_pseudo_rna_scope
 ranges = add_pseudo_rna_scope(
     adata,
     channel1 = channel1,
+    channel1_color = (1,0,0),  # red (RGB)
     channel2 = channel2,
+    channel2_color = (0,1,0),  # green (RGB)
     auto_range_quantiles = (0.2, 0.9),
     knn_smooth = True,
 )
@@ -53,10 +53,10 @@ sc.pl.spatial(
     show=False,
 )
 
-plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel2_vmin"], ranges["channel2_vmax"]), cmap='Greens'),
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel2]["vmin"], ranges[channel2]["vmax"]), cmap='Greens'),
              orientation='vertical', label=channel2, extend='both', shrink=0.5, pad=-0.04)
 
-plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges["channel1_vmin"], ranges["channel1_vmax"]), cmap='Reds'),
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel1]["vmin"], ranges[channel1]["vmax"]), cmap='Reds'),
              orientation='vertical', label=channel1, extend='both', shrink=0.5, pad=0.03)
 ```
 

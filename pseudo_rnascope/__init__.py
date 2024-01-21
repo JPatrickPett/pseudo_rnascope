@@ -1,6 +1,7 @@
 """Approximate missing features from higher dimensionality data neighbours"""
 __version__ = "0.0.5"
 
+import re
 import numpy as np
 import scipy as sp
 
@@ -45,19 +46,16 @@ def graph_smooth(expression_matrix, neighbor_matrix):
 def add_pseudo_rna_scope(
     adata,
     channel1="gene1",
-    channel2="gene2",
     channel1_vmin=None,
     channel1_vmax=None,
     channel1_color=(1, 0, 0),  # RGB
-    channel2_vmin=None,
-    channel2_vmax=None,
-    channel2_color=(0, 1, 0),  # RGB
     auto_range_quantiles=(0.2, 0.9),
     knn_smooth=False,
-    na_thr=0,
+    gamma=4.5,
+    **kwargs,
 ):
     """
-    Add information to an existing `anndata` object, so that two genes can be plotted with two colors. Combined gene expression is represented through additive color mixing.
+    Add information to an existing `anndata` object, so that multiple genes can be plotted with different colors. Combined gene expression is represented through additive color mixing. An arbitrary number of channels can be added as **kwargs ("channel<x>" and "channel<x>_color" mandatory, "channel<x>_<vmin|vmax>" optional).
 
     Adds a column `pseudo_RNAscope` to the `anndata.obs` dataframe, which can be selected in `scanpy` plotting functions and saves the mixed colors in a corresponding `anndata.uns["pseudo_RNAscope_colors"]` entry.
     Adds a column `pseudo_RNAscope_alpha` to the `anndata.obs` dataframe, which can be passed as alpha values to plotting functions, so that low expression spots are transparent.
@@ -78,73 +76,91 @@ def add_pseudo_rna_scope(
         tuple with lower and upper quantiles for automatic selection of `channel<x>_vmin` and `channel<x>_vmax`, respecively. Setting the bounds explicitly overrides this option.
     knn_smooth :
         whether to run nearest-neighbor smoothing on the gene expression values to mitigate sparsity (default: False)
+    gamma:
+        gamma value for gamma correction of mixed colors; larger values make mixed colors appear brighter (default: 4.5)
 
     Returns
     -------
     A dictionary with selected dynamic ranges for plotting (e.g. for adding colorbars).
     """
 
-    for cnl in [channel1, channel2]:
+    # channel1 info
+    channels = [channel1]
+    channel_params = {
+        channel1: {
+            "color": channel1_color,
+            "vmin": channel1_vmin,
+            "vmax": channel1_vmax,
+        }
+    }
+
+    # add channel info from kwargs
+    channel_kwargs = {k: v for k, v in kwargs.items() if re.match("^channel[0-9]+$", k)}
+    channels.extend(channel_kwargs.values())
+    channel_params.update(
+        {
+            {
+                "color": kwargs[f"{name}_color"],  # color required
+                "vmin": kwargs.get(f"{name}_vmin"),
+                "vmax": kwargs.get(f"{name}_vmax"),
+            }
+            for name, cnl in channel_kwargs.items()
+        }
+    )
+
+    # checks
+    for cnl in channels:
         if cnl not in adata.var_names:
             raise ValueError(f"gene '{cnl}' not in 'adata.var_names'")
 
+    # get expression vectors
+    exp_vectors = []
     if knn_smooth:
-        channel1_vec = np.array(
-            graph_smooth(adata[:, channel1].X, adata.obsp["connectivities"])
-        ).flatten()
-        channel2_vec = np.array(
-            graph_smooth(adata[:, channel2].X, adata.obsp["connectivities"])
-        ).flatten()
+        for cnl in channels:
+            exp_vectors[cnl] = np.array(
+                graph_smooth(adata[:, cnl].X, adata.obsp["connectivities"])
+            ).flatten()
     else:
-        channel1_vec = get_array(adata, channel1)
-        channel2_vec = get_array(adata, channel2)
+        for cnl in channels:
+            exp_vectors[cnl] = get_array(adata, cnl)
 
-    if not channel1_vmin and auto_range_quantiles:
-        channel1_vmin = np.quantile(
-            channel1_vec[channel1_vec > 0], q=[auto_range_quantiles[0]]
-        )
-    if not channel1_vmax and auto_range_quantiles:
-        channel1_vmax = np.quantile(
-            channel1_vec[channel1_vec > 0], q=[auto_range_quantiles[1]]
-        )
-    if not channel2_vmin and auto_range_quantiles:
-        channel2_vmin = np.quantile(
-            channel2_vec[channel2_vec > 0], q=[auto_range_quantiles[0]]
-        )
-    if not channel2_vmax and auto_range_quantiles:
-        channel2_vmax = np.quantile(
-            channel2_vec[channel2_vec > 0], q=[auto_range_quantiles[1]]
-        )
+    for cnl in channels:
+        exp_vec = exp_vectors[cnl]
+        if not channel_params[cnl]["vmin"] and auto_range_quantiles:
+            channel_params[cnl]["vmin"] = np.quantile(
+                exp_vec[exp_vec > 0], q=[auto_range_quantiles[0]]
+            )
+        if not channel_params[cnl]["vmax"] and auto_range_quantiles:
+            channel_params[cnl]["vmax"] = np.quantile(
+                exp_vec[exp_vec > 0], q=[auto_range_quantiles[1]]
+            )
 
-    ### ASSIGN COLORS
-
+    # assign colors
     rgb_values = [
-        mix_colors([np.array(channel1_color) * (x if not np.isnan(x) else 0), np.array(channel2_color) * (y if not np.isnan(y) else 0)])
-        for x, y in zip(
-            scale(channel1_vec, vmin=channel1_vmin, vmax=channel1_vmax),
-            scale(channel2_vec, vmin=channel2_vmin, vmax=channel2_vmax),
+        mix_colors(
+            [
+                np.array(channel_params[cnl]["color"]) * (x if not np.isnan(x) else 0)
+                for cnl, x in zip(channels, exp_vals_scaled)
+            ],
+            gamma=gamma,
+        )
+        for exp_vals_scaled in zip(
+            *[
+                scale(
+                    exp_vectors[cnl],
+                    vmin=channel_params[cnl]["vmin"],
+                    vmax=channel_params[cnl]["vmax"],
+                )
+                for cnl in channels
+            ]
         )
     ]
 
-    ### STORE ANNDATA COLUMN AND VALUES
-
-    adata.obs["pseudo_RNAscope"] = [
-        x if max(y) >= na_thr else np.nan for x, y in zip(adata.obs_names, rgb_values)
-    ]
-    adata.uns["pseudo_RNAscope_colors"] = [
-        rgb2hex(y) for x, y in zip(adata.obs_names, rgb_values) if max(y) >= na_thr
-    ]
-    adata.obs["pseudo_RNAscope"] = adata.obs["pseudo_RNAscope"].astype("category")
+    # store information in anndata
+    adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
+    adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
     adata.obs["pseudo_RNAscope_alpha"] = [
-        y if max(z) >= na_thr else 0
-        for y, z in zip(
-            scale(np.array([np.mean(x) for x in rgb_values]), max_val=1), rgb_values
-        )
+        y for y in scale(np.array([np.mean(x) for x in rgb_values]), max_val=1)
     ]
 
-    return {
-        "channel1_vmin": channel1_vmin,
-        "channel1_vmax": channel1_vmax,
-        "channel2_vmin": channel2_vmin,
-        "channel2_vmax": channel2_vmax,
-    }
+    return channel_params
