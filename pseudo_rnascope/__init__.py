@@ -98,8 +98,8 @@ def add_pseudo_rna_scope(
     channel_kwargs = {k: v for k, v in kwargs.items() if re.match("^channel[0-9]+$", k)}
     channels.extend(channel_kwargs.values())
     channel_params.update(
-        {
-            {
+        **{
+            cnl: {
                 "color": kwargs[f"{name}_color"],  # color required
                 "vmin": kwargs.get(f"{name}_vmin"),
                 "vmax": kwargs.get(f"{name}_vmax"),

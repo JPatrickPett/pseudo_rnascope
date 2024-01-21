@@ -33,7 +33,7 @@ ranges = add_pseudo_rna_scope(
 )
 ```
 
-This will by default use red for channel1 (*FGF2*) and green for channel2 (*FGFR2*), hence overlaps will appear yellow.
+This will use red for channel1 (*FGF2*) and green for channel2 (*FGFR2*), hence overlaps will appear yellow.
 
 Dynamic ranges can be set for both channels explicitly, or automatically via upper and lower gene expression quantiles with `auto_range_quantiles`.
 Neareast-neighbor smoothing of expression values can be added to mitigate data sparsity with `knn_smooth=True`.
