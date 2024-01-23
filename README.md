@@ -69,6 +69,37 @@ plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel1]["v
 ```
 
 Corresponding colors for all spots are saved in `adata.uns["pseudo_RNAscope_colors"]` and another `anndata.obs` column called `"pseudo_RNAscope_alpha"` allows to set alpha values, making spots with low color intensity transparent.
+Computed colors are also encoded as decimal numbers between 0 and 1, and stored in `adata.obs["pseudo_RNAscope_alt"]`. This can be used as an **alternative** option for plotting.
+
+<details>
+<summary><b>alternative</b></summary>
+
+Use values stored in `adata.obs["pseudo_RNAscope_alt"]` and pass `adata.uns["pseudo_RNAscope"]["cmap"]` as a colormap to decode them:
+
+```python
+sc.set_figure_params(figsize=[16,16], dpi=75)
+
+sc.pl.spatial(
+    adata, 
+    img_key="hires", 
+    color='pseudo_RNAscope_alt', 
+    size=1.5,
+    cmap = adata.uns['pseudo_RNAscope']['cmap'],
+    vmin=0, # use all values (necessary)
+    vmax=1, # use all values (necessary)
+    colorbar_loc=None,  # turn off native colorbar, we need separate ones per channel
+    alpha = adata.obs.sort_values("pseudo_RNAscope_alt")["pseudo_RNAscope_alpha"],  # since values will be sorted before plotting
+    show=False,
+)
+
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel2]["vmin"], ranges[channel2]["vmax"]), cmap='Greens'),
+             orientation='vertical', label=channel2, extend='both', shrink=0.5, pad=-0.04)
+
+plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel1]["vmin"], ranges[channel1]["vmax"]), cmap='Reds'),
+             orientation='vertical', label=channel1, extend='both', shrink=0.5, pad=0.03)
+```
+
+</details>
 
 ## System requirements
 

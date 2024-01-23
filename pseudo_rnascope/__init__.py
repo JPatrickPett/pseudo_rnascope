@@ -4,6 +4,7 @@ __version__ = "0.0.5"
 import re
 import numpy as np
 import scipy as sp
+import matplotlib as mpl
 
 
 def get_array(adata, gene_symbol):
@@ -24,7 +25,7 @@ def scale(x, max_val=255, vmin=None, vmax=None):
 
 def mix_colors(colors, gamma=4.5):
     assert gamma > 0
-    return np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma)
+    return np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma).round().astype(int)
 
 
 def rgb2hex(rgb_tuple):
@@ -34,6 +35,17 @@ def rgb2hex(rgb_tuple):
 
 def hex2rgb(hexcode):
     return tuple(map(ord, hexcode[1:].decode("hex")))
+
+
+def to_decimal(n_list, b):
+    """convert each number in n_list of base b to decimal (non-dec numbers represented as lists)"""
+    out = []
+    for n in n_list:
+        result = 0
+        for i, num in enumerate(n):
+            result += num * b ** i
+        out.append(result)
+    return out
 
 
 def graph_smooth(expression_matrix, neighbor_matrix):
@@ -159,14 +171,12 @@ def add_pseudo_rna_scope(
 
     # store information in anndata
     adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
-    adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
-    
-    adata.uns["pseudo_RNAscope_alpha"] = scale(
+    adata.obs["pseudo_RNAscope_alt"] = [x / 16777215 for x in to_decimal(rgb_values, 256)]  # encode rgb-triplets as decimal float number between 0 and 1
+    adata.obs["pseudo_RNAscope_alpha"] = scale(
         np.array([np.max(x) for x in rgb_values]), max_val=1
     )
-    adata.obs["pseudo_RNAscope_alpha"] = adata.uns[
-        "pseudo_RNAscope_alpha"
-    ]  # deprecated, will be in adata.uns
+    
+    adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
     
     adata.uns["pseudo_RNAscope"] = {
         "auto_range_quantiles": auto_range_quantiles,
@@ -175,6 +185,61 @@ def add_pseudo_rna_scope(
         "channels": channels,
         "channel_params": channel_params,
         "rgb_values": rgb_values,
+        "cmap": RGBcmap('decode_RGB'),
     }
 
     return channel_params
+
+
+class RGBcmap(mpl.colors.Colormap):
+    """
+    matplotlib colormap to decode rgb-triplets saved as decimal [0,1] floating point numbers
+    """
+    def __init__(self, *args, **kwargs):
+        super(RGBcmap, self).__init__(*args, **kwargs)
+
+    def __call__(self, X, alpha=None, bytes=False):
+        # TODO: optimize this
+        xa = np.array(X, copy=True)
+            
+        def dec_to_base(n_arr, b):
+            out = []
+            if n_arr.size==1:
+                n_arr = [n_arr]
+            for n in n_arr:
+                if n == 0:
+                    out.append([0])
+                    continue
+                digits = []
+                while n:
+                    digits.append(int(n % b))
+                    n //= b
+                out.append(digits[::-1])
+            return out
+            
+        out = dec_to_base(xa * 16777215, 256)
+        for color in out:
+            color.reverse()
+            color += [0]*(4-len(color))
+        rgba = np.array(out, dtype=float)
+        rgba /= 255
+
+        if alpha is not None:
+            alpha = np.clip(alpha, 0, 1)
+            if alpha.shape not in [(), xa.shape]:
+                raise ValueError(
+                    f"alpha is array-like but its shape {alpha.shape} does "
+                    f"not match that of X {xa.shape}")
+            rgba[..., -1] = alpha
+
+        if bytes:
+            rgba *= 255
+        
+        if not np.iterable(X):
+            rgba = tuple(rgba)
+        return rgba
+
+
+
+
+
