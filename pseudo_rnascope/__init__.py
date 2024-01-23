@@ -117,20 +117,21 @@ def add_pseudo_rna_scope(
     exp_vectors = {}
     if knn_smooth:
         for cnl in channels:
-            exp_vectors[cnl] = np.array(
-                graph_smooth(adata[:, cnl].X, adata.obsp["connectivities"])
-            ).flatten()
+            smooth_mat = graph_smooth(adata[:, cnl].X, adata.obsp["connectivities"])
+            if sp.sparse.issparse(smooth_mat):
+                smooth_mat = smooth_mat.todense()
+            exp_vectors[cnl] = np.array(smooth_mat).flatten()
     else:
         for cnl in channels:
             exp_vectors[cnl] = get_array(adata, cnl)
 
     for cnl in channels:
         exp_vec = exp_vectors[cnl]
-        if not channel_params[cnl]["vmin"] and auto_range_quantiles:
+        if channel_params[cnl]["vmin"] is None and auto_range_quantiles:
             channel_params[cnl]["vmin"] = np.quantile(
                 exp_vec[exp_vec > 0], q=[auto_range_quantiles[0]]
             )
-        if not channel_params[cnl]["vmax"] and auto_range_quantiles:
+        if channel_params[cnl]["vmax"] is None and auto_range_quantiles:
             channel_params[cnl]["vmax"] = np.quantile(
                 exp_vec[exp_vec > 0], q=[auto_range_quantiles[1]]
             )
@@ -158,14 +159,15 @@ def add_pseudo_rna_scope(
 
     # store information in anndata
     adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
-    adata.obs["pseudo_RNAscope_rgb"] = rgb_values
     adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
+    
     adata.uns["pseudo_RNAscope_alpha"] = scale(
-        np.array([np.mean(x) for x in rgb_values]), max_val=1
+        np.array([np.max(x) for x in rgb_values]), max_val=1
     )
     adata.obs["pseudo_RNAscope_alpha"] = adata.uns[
         "pseudo_RNAscope_alpha"
     ]  # deprecated, will be in adata.uns
+    
     adata.uns["pseudo_RNAscope"] = {
         "auto_range_quantiles": auto_range_quantiles,
         "knn_smooth": knn_smooth,
