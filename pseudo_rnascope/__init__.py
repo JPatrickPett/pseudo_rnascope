@@ -158,9 +158,21 @@ def add_pseudo_rna_scope(
 
     # store information in anndata
     adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
+    adata.obs["pseudo_RNAscope_rgb"] = rgb_values
     adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
-    adata.obs["pseudo_RNAscope_alpha"] = [
-        y for y in scale(np.array([np.mean(x) for x in rgb_values]), max_val=1)
-    ]
+    adata.uns["pseudo_RNAscope_alpha"] = scale(
+        np.array([np.mean(x) for x in rgb_values]), max_val=1
+    )
+    adata.obs["pseudo_RNAscope_alpha"] = adata.uns[
+        "pseudo_RNAscope_alpha"
+    ]  # deprecated, will be in adata.uns
+    adata.uns["pseudo_RNAscope"] = {
+        "auto_range_quantiles": auto_range_quantiles,
+        "knn_smooth": knn_smooth,
+        "gamma": gamma,
+        "channels": channels,
+        "channel_params": channel_params,
+        "rgb_values": rgb_values,
+    }
 
     return channel_params

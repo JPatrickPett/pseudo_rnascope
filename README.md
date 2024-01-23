@@ -56,7 +56,7 @@ sc.pl.spatial(
     img_key="hires", 
     color='pseudo_RNAscope', 
     size=1.5,
-    legend_loc=None,
+    legend_loc=None,  # turn off legend (necessary)
     alpha = adata.obs["pseudo_RNAscope_alpha"],
     show=False,
 )
