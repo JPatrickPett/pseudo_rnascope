@@ -1,5 +1,4 @@
-"""Approximate missing features from higher dimensionality data neighbours"""
-__version__ = "0.0.5"
+__version__ = "0.0.8"
 
 import re
 import numpy as np
@@ -8,48 +7,251 @@ import matplotlib as mpl
 
 
 def get_array(adata, gene_symbol):
+    """
+    Extract expression values for a specified gene from an AnnData object.
+
+    Parameters
+    ----------
+    adata : anndata.AnnData
+        An AnnData object containing single-cell or single-nucleus gene expression data.
+    gene_symbol : str
+        The symbol of the gene for which expression values are to be extracted.
+
+    Returns
+    -------
+    np.ndarray
+        A 1-dimensional NumPy array containing the expression values for the specified gene across all cells or nuclei.
+
+    Raises
+    ------
+    ValueError
+        If the provided gene symbol is not present in the AnnData object.
+    """
     exp_mat = adata.X[:, adata.var_names == gene_symbol]
+
     if sp.sparse.issparse(exp_mat):
         exp_mat = exp_mat.todense()
+
+    if exp_mat.size == 0:
+        raise ValueError(f"Gene symbol '{gene_symbol}' not found in the provided AnnData object.")
+
     return np.array(exp_mat).flatten()
 
 
+
 def scale(x, max_val=255, vmin=None, vmax=None):
+    """
+    Scale the values of an array to a specified range.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        The input array to be scaled.
+    max_val : float, optional
+        The maximum value of the scaled range. Default is 255.
+    vmin : float or None, optional
+        If specified, values below this threshold will be set to NaN before scaling. Default is None.
+    vmax : float or None, optional
+        If specified, values above this threshold will be set to `vmax` before scaling. Default is None.
+
+    Returns
+    -------
+    np.ndarray
+        The scaled array.
+
+    Notes
+    -----
+    The function scales the input array `x` to the range [0, `max_val`] based on the specified minimum (`vmin`)
+    and maximum (`vmax`) values. If `vmin` or `vmax` is not provided, the minimum and maximum values of the
+    input array are used for scaling.
+
+    NaN values are ignored during scaling.
+
+    Examples
+    --------
+    >>> scaled_array = scale(input_array, max_val=1, vmin=0.5, vmax=2.5)
+
+    """
     x = x.copy().astype(float)
+
     if vmin:
         x[x < vmin] = np.nan
     if vmax:
         x[x > vmax] = vmax
+
     return max_val * (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x))
 
 
-def mix_colors(colors, gamma=4.5):
+
+def mix_colors(colors, gamma=10):
+    """
+    Mix multiple colors by applying gamma correction.
+
+    Parameters
+    ----------
+    colors : list of tuples
+        A list of tuples representing RGB colors. Each tuple should contain three values for the red, green, and blue components.
+    gamma : float, optional
+        Gamma correction parameter. Must be greater than 0. Default is 10.
+
+    Returns
+    -------
+    tuple
+        A tuple representing the mixed color after applying gamma correction.
+
+    Raises
+    ------
+    AssertionError
+        If the gamma value is not greater than 0.
+
+    Examples
+    --------
+    >>> mix_colors([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    (127, 127, 127)
+
+    >>> mix_colors([(255, 0, 0), (0, 255, 0), (0, 0, 255)], gamma=2.2)
+    (169, 169, 169)
+
+    """
     assert gamma > 0
     return np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma).round().astype(int)
 
 
+
 def rgb2hex(rgb_tuple):
+    """
+    Convert an RGB color represented as a tuple to its hexadecimal representation.
+
+    Parameters
+    ----------
+    rgb_tuple : tuple
+        A tuple representing the RGB color with three values for red, green, and blue components.
+
+    Returns
+    -------
+    str
+        A string representing the hexadecimal color code.
+
+    Examples
+    --------
+    >>> rgb2hex((255, 0, 128))
+    '#ff0080'
+
+    """
     r, g, b = np.round(rgb_tuple).astype(int)
     return "#{:02x}{:02x}{:02x}".format(r, g, b)
 
 
 def hex2rgb(hexcode):
+    """
+    Convert a hexadecimal color code to an RGB color represented as a tuple.
+
+    Parameters
+    ----------
+    hexcode : str
+        A string representing the hexadecimal color code.
+
+    Returns
+    -------
+    tuple
+        A tuple containing three values for the red, green, and blue components of the color.
+
+    Examples
+    --------
+    >>> hex2rgb('#ff0080')
+    (255, 0, 128)
+
+    """
     return tuple(map(ord, hexcode[1:].decode("hex")))
 
 
-def to_decimal(n_list, b):
-    """convert each number in n_list of base b to decimal (non-dec numbers represented as lists)"""
-    out = []
-    for n in n_list:
-        result = 0
-        for i, num in enumerate(n):
-            result += num * b ** i
-        out.append(result)
-    return out
+def convert_base(number, from_base, to_base):
+    """
+    Convert a number from one base to another.
+
+    Args:
+    - number (List[int]): The list representing the number to be converted.
+    - from_base (int): The base of the input number.
+    - to_base (int): The desired base for the output.
+
+    Returns:
+    - List[int]: The converted number in the specified base.
+    """
+    # Convert the input number to base 10
+    decimal_number = 0
+    for digit in number:
+        if digit < 0 or digit >= from_base:
+            raise ValueError("Invalid digit in the input number")
+
+        decimal_number = decimal_number * from_base + digit
+
+    # Convert the base 10 number to the desired base
+    converted_number = []
+    while decimal_number > 0:
+        remainder = decimal_number % to_base
+        converted_number.insert(0, remainder)
+        decimal_number //= to_base
+
+    return converted_number if converted_number else [0]
+
+
+def encode_rgb(rgb_list):
+    """
+    Encode a list of RGB color values into a list of normalized decimal numbers.
+
+    Parameters
+    ----------
+    rgb_list : list of tuples
+        A list of tuples representing RGB color values. Each tuple should contain three integers for the red, green, and blue components.
+
+    Returns
+    -------
+    list
+        A list of normalized decimal numbers representing the encoded RGB colors.
+
+    Notes
+    -----
+    This function encodes RGB color values into normalized decimal numbers. Each RGB color value is converted to a decimal
+    number using a base conversion approach. The resulting decimal numbers are then normalized to the range [0, 1].
+
+    Examples
+    --------
+    >>> encode_rgb([(255, 0, 0), (0, 255, 0), (0, 0, 255)])
+    [1.5199185323666652e-05, 0.003890991442858663, 0.9960938093718177]
+
+    """
+    decimal_numbers = [convert_base(reversed(x), 256, 10) for x in rgb_list]
+    decimal_numbers_simple = [int(''.join(str(i) for i in x)) for x in decimal_numbers]
+    return [x / 16777215 for x in decimal_numbers_simple]
 
 
 def graph_smooth(expression_matrix, neighbor_matrix):
-    """smoothing over the knn graph"""
+    """
+    Smooth gene expression values over a k-nearest neighbors (knn) graph.
+
+    Parameters
+    ----------
+    expression_matrix : np.ndarray
+        The gene expression matrix where rows represent cells and columns represent genes.
+    neighbor_matrix : np.ndarray
+        The k-nearest neighbors graph matrix indicating the connectivity between cells.
+
+    Returns
+    -------
+    np.ndarray
+        A smoothed gene expression matrix based on the k-nearest neighbors graph.
+
+    Notes
+    -----
+    This function performs a smoothing operation over the gene expression matrix using information from the
+    k-nearest neighbors graph. It calculates the weighted sum of expression values for each cell and its neighbors,
+    then normalizes by the number of neighbors each cell has. The result is a smoothed gene expression matrix.
+
+    Examples
+    --------
+    >>> smoothed_expression = graph_smooth(expression_matrix, neighbor_matrix)
+
+    """
     return ((neighbor_matrix @ expression_matrix) + expression_matrix) / (
         neighbor_matrix > 0
     ).sum(axis=1)
@@ -171,7 +373,7 @@ def add_pseudo_rna_scope(
 
     # store information in anndata
     adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
-    adata.obs["pseudo_RNAscope_alt"] = [x / 16777215 for x in to_decimal(rgb_values, 256)]  # encode rgb-triplets as decimal float number between 0 and 1
+    adata.obs["pseudo_RNAscope_alt"] = encode_rgb(rgb_values)  # encode rgb-triplets as decimal float number between 0 and 1
     adata.obs["pseudo_RNAscope_alpha"] = scale(
         np.array([np.max(x) for x in rgb_values]), max_val=1
     )
