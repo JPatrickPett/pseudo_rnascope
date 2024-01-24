@@ -69,8 +69,9 @@ plt.colorbar(mpl.cm.ScalarMappable(norm=mpl.colors.Normalize(ranges[channel1]["v
 ```
 
 Corresponding colors for all spots are saved in `adata.uns["pseudo_RNAscope_colors"]` and another `anndata.obs` column called `"pseudo_RNAscope_alpha"` allows to set alpha values, making spots with low color intensity transparent.
+
 Computed colors are also encoded as decimal numbers between 0 and 1, and stored in `adata.obs["pseudo_RNAscope_alt"]`. 
-This can be used as an **alternative** option for plotting that also works with **squidpyo* plotting functions.
+This can be used as an **alternative** option for plotting (also works with **squidpy.pl.spatial_scatter()**).
 
 <details>
 <summary><b>alternative</b></summary>
