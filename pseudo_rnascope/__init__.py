@@ -1,3 +1,7 @@
+"""
+simple package for plotting multiple genes with different colors and additive colormixing in scanpy or squidpy.
+"""
+
 __version__ = "0.0.8"
 
 import re
