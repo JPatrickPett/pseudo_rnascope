@@ -10,37 +10,41 @@ import scipy as sp
 import matplotlib as mpl
 
 
-def get_array(adata, gene_symbol):
+def get_array(adata, annot):
     """
-    Extract expression values for a specified gene from an AnnData object.
+    Extract expression values or annotation for a specified gene or annotation column in an AnnData object.
 
     Parameters
     ----------
     adata : anndata.AnnData
         An AnnData object containing single-cell or single-nucleus gene expression data.
-    gene_symbol : str
-        The symbol of the gene for which expression values are to be extracted.
+    annot : str
+        The symbol of the gene (in `adata.var_names`) for which expression values are to be extracted or a column in
+        `adata.obs` for which values are to be extracted.
 
     Returns
     -------
     np.ndarray
-        A 1-dimensional NumPy array containing the expression values for the specified gene across all cells or nuclei.
+        A 1-dimensional NumPy array containing the values for `annot` across all cells or nuclei.
 
     Raises
     ------
     ValueError
-        If the provided gene symbol is not present in the AnnData object.
+        If the provided gene symbol or annotation column is not present in the AnnData object.
     """
-    exp_mat = adata.X[:, adata.var_names == gene_symbol]
+    if annot in adata.var_names:
+        val_mat = adata.X[:, adata.var_names == annot]
+    elif annot in adata.obs.columns:
+        val_mat = adata.obs[annot].values
+    else:
+        raise ValueError(
+            f"Gene symbol '{annot}' not found in the provided AnnData object."
+        )
 
-    if sp.sparse.issparse(exp_mat):
-        exp_mat = exp_mat.todense()
+    if sp.sparse.issparse(val_mat):
+        val_mat = val_mat.todense()
 
-    if exp_mat.size == 0:
-        raise ValueError(f"Gene symbol '{gene_symbol}' not found in the provided AnnData object.")
-
-    return np.array(exp_mat).flatten()
-
+    return np.array(val_mat).flatten()
 
 
 def scale(x, max_val=255, vmin=None, vmax=None):
@@ -86,7 +90,6 @@ def scale(x, max_val=255, vmin=None, vmax=None):
     return max_val * (x - np.nanmin(x)) / (np.nanmax(x) - np.nanmin(x))
 
 
-
 def mix_colors(colors, gamma=10):
     """
     Mix multiple colors by applying gamma correction.
@@ -118,8 +121,11 @@ def mix_colors(colors, gamma=10):
 
     """
     assert gamma > 0
-    return np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma).round().astype(int)
-
+    return (
+        np.power(sum([c**gamma for c in colors]) / len(colors), 1 / gamma)
+        .round()
+        .astype(int)
+    )
 
 
 def rgb2hex(rgb_tuple):
@@ -225,7 +231,7 @@ def encode_rgb(rgb_list):
 
     """
     decimal_numbers = [convert_base(reversed(x), 256, 10) for x in rgb_list]
-    decimal_numbers_simple = [int(''.join(str(i) for i in x)) for x in decimal_numbers]
+    decimal_numbers_simple = [int("".join(str(i) for i in x)) for x in decimal_numbers]
     return [x / 16777215 for x in decimal_numbers_simple]
 
 
@@ -377,13 +383,15 @@ def add_pseudo_rna_scope(
 
     # store information in anndata
     adata.obs["pseudo_RNAscope"] = adata.obs_names.astype("category")
-    adata.obs["pseudo_RNAscope_alt"] = encode_rgb(rgb_values)  # encode rgb-triplets as decimal float number between 0 and 1
+    adata.obs["pseudo_RNAscope_alt"] = encode_rgb(
+        rgb_values
+    )  # encode rgb-triplets as decimal float number between 0 and 1
     adata.obs["pseudo_RNAscope_alpha"] = scale(
         np.array([np.max(x) for x in rgb_values]), max_val=1
     )
-    
+
     adata.uns["pseudo_RNAscope_colors"] = [rgb2hex(x) for x in rgb_values]
-    
+
     adata.uns["pseudo_RNAscope"] = {
         "auto_range_quantiles": auto_range_quantiles,
         "knn_smooth": knn_smooth,
@@ -391,7 +399,7 @@ def add_pseudo_rna_scope(
         "channels": channels,
         "channel_params": channel_params,
         "rgb_values": rgb_values,
-        "cmap": RGBcmap('decode_RGB'),
+        "cmap": RGBcmap("decode_RGB"),
     }
 
     return channel_params
@@ -401,16 +409,17 @@ class RGBcmap(mpl.colors.Colormap):
     """
     matplotlib colormap to decode rgb-triplets saved as decimal [0,1] floating point numbers
     """
+
     def __init__(self, *args, **kwargs):
         super(RGBcmap, self).__init__(*args, **kwargs)
 
     def __call__(self, X, alpha=None, bytes=False):
         # TODO: optimize this
         xa = np.array(X, copy=True)
-            
+
         def dec_to_base(n_arr, b):
             out = []
-            if n_arr.size==1:
+            if n_arr.size == 1:
                 n_arr = [n_arr]
             for n in n_arr:
                 if n == 0:
@@ -422,11 +431,11 @@ class RGBcmap(mpl.colors.Colormap):
                     n //= b
                 out.append(digits[::-1])
             return out
-            
+
         out = dec_to_base(xa * 16777215, 256)
         for color in out:
             color.reverse()
-            color += [0]*(4-len(color))
+            color += [0] * (4 - len(color))
         rgba = np.array(out, dtype=float)
         rgba /= 255
 
@@ -435,17 +444,13 @@ class RGBcmap(mpl.colors.Colormap):
             if alpha.shape not in [(), xa.shape]:
                 raise ValueError(
                     f"alpha is array-like but its shape {alpha.shape} does "
-                    f"not match that of X {xa.shape}")
+                    f"not match that of X {xa.shape}"
+                )
             rgba[..., -1] = alpha
 
         if bytes:
             rgba *= 255
-        
+
         if not np.iterable(X):
             rgba = tuple(rgba)
         return rgba
-
-
-
-
-

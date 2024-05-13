@@ -3,3 +3,4 @@
 docs/_build
 pseudo_rnascope/__pycache__/
 pseudo_rnascope/.ipynb_checkpoints/
+.idea
