@@ -334,20 +334,19 @@ def add_pseudo_rna_scope(
 
     # checks
     for cnl in channels:
-        if cnl not in adata.var_names:
-            raise ValueError(f"gene '{cnl}' not in 'adata.var_names'")
+        if cnl not in adata.var_names and cnl not in adata.obs:
+            raise ValueError(f"gene '{cnl}' not in 'adata.var_names' and not 'adata.obs'")
 
     # get expression vectors
     exp_vectors = {}
+    for cnl in channels:
+        exp_vectors[cnl] = get_array(adata, cnl)
     if knn_smooth:
         for cnl in channels:
-            smooth_mat = graph_smooth(adata[:, cnl].X, adata.obsp["connectivities"])
+            smooth_mat = graph_smooth(np.asmatrix(exp_vectors[cnl]).T, adata.obsp["connectivities"])
             if sp.sparse.issparse(smooth_mat):
                 smooth_mat = smooth_mat.todense()
             exp_vectors[cnl] = np.array(smooth_mat).flatten()
-    else:
-        for cnl in channels:
-            exp_vectors[cnl] = get_array(adata, cnl)
 
     for cnl in channels:
         exp_vec = exp_vectors[cnl]
