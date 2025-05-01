@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "pseudo_rnascope"
 authors = [{name = "Jan Patrick Pett", email = "jp30@sanger.ac.uk"}]
-license = {file = "LICENSE"}
+license = {file = "LICENSE.txt"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
 dependencies = [
